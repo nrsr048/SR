@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Tez tibbiy yordam (103), yong'in xavfsizligi (101) va ichki ishlar (102) xizmatlari haqida bolalar uchun interaktiv o'yin.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%9A%A8%3C/text%3E%3C/svg%3E">
+<title>Shoshilinch xizmatlar</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;800&display=swap">
+<style>
+/* Layout: one full-screen city scene. Header with 4 game modes, a row of round picture tokens in the sky, three service buildings as targets, a road with moving vehicles at the bottom. Day/night switch repaints sky and lights windows. Built to be shown large on a TV. */
+:root{
+  --sky1:#6ec1ff; --sky2:#dff3ff; --hill1:#74d29a; --hill2:#4db577; --road:#3e4a5d; --ink:#10304a;
+  --glass:rgba(255,255,255,.82); --glassb:#ffffff; --win:#bfe3ff;
+  --med:#ff5d73; --fire:#ff9f1c; --pol:#3b82f6; --ok:#1fae6c; --bad:#e5484d; --line:rgba(16,48,74,.18);
+  --fd:"Baloo 2","Trebuchet MS",system-ui,sans-serif; --fb:"Nunito",system-ui,sans-serif;
+  --tok:clamp(72px,min(13vh,9vw),170px);
+  color-scheme:light;
+}
+body[data-time="night"]{
+  --sky1:#070f33; --sky2:#2a3a86; --hill1:#1f6b55; --hill2:#15483f; --road:#1a202c; --ink:#eaf2ff;
+  --glass:rgba(14,22,58,.78); --glassb:#18235a; --win:#ffd666; --line:rgba(234,242,255,.22);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--sky2);color:var(--ink);font-family:var(--fb);font-weight:700;font-size:clamp(15px,1.15vw,24px);
+  user-select:none;-webkit-user-select:none;overflow-x:hidden}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:4px solid #ffd23f;outline-offset:2px}
+.app{min-height:100dvh;display:flex;flex-direction:column;
+  padding-left:max(0px,env(safe-area-inset-left,0px));padding-right:max(0px,env(safe-area-inset-right,0px))}
+/* header */
+.top{position:relative;z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:.6em 1.2em;justify-content:space-between;
+  padding:.6em max(16px,env(safe-area-inset-left,0px)) .6em max(16px,env(safe-area-inset-right,0px));background:var(--glass);backdrop-filter:blur(8px);border-bottom:2px solid var(--line)}
+.brand{display:flex;align-items:center;gap:.6em;min-width:0}
+.logo{font-size:2.2em;line-height:1;animation:blink 1s steps(2) infinite}
+.brand h1{font-family:var(--fd);font-weight:800;font-size:1.7em;line-height:1;margin:0}
+.brand p{margin:.1em 0 0;font-size:.9em;opacity:.75;letter-spacing:.08em}
+.modes{display:flex;flex-wrap:wrap;gap:.4em}
+.modes button{border:2px solid var(--line);background:var(--glassb);border-radius:999px;padding:.45em 1em;font-weight:800;font-size:1.02em}
+.modes button[aria-selected="true"]{background:var(--ink);color:var(--glassb);border-color:var(--ink)}
+.ctl{display:flex;gap:.4em;flex-wrap:wrap}
+.ctl button{width:2.6em;height:2.6em;border-radius:50%;border:2px solid var(--line);background:var(--glassb);font-size:1.1em;line-height:1;padding:0}
+.ctl button[aria-pressed="false"]{opacity:.5}
+/* scene */
+.scene{position:relative;flex:1;display:flex;flex-direction:column;overflow:hidden;isolation:isolate;min-height:560px}
+.sky{position:absolute;inset:0;z-index:-5;transition:opacity 1.2s}
+.sky.d{background:linear-gradient(180deg,#5db6ff 0%,#bfe6ff 62%,#fff4cf 100%)}
+.sky.n{background:linear-gradient(180deg,#050b26 0%,#1d2a6b 60%,#5a4b8f 100%);opacity:0}
+body[data-time="night"] .sky.n{opacity:1}
+body[data-time="night"] .sky.d{opacity:0}
+.sun,.moon{position:absolute;z-index:-4;top:7%;right:9%;width:clamp(60px,8vw,150px);aspect-ratio:1;border-radius:50%;transition:opacity 1s,transform 1.4s}
+.sun{background:radial-gradient(circle,#fffbd0 0 38%,#ffd84a 40% 62%,rgba(255,216,74,0) 72%);box-shadow:0 0 6vw 2vw rgba(255,224,102,.55);animation:spin 40s linear infinite}
+.moon{background:#fdf6d8;box-shadow:inset -1.6vw -.6vw 0 0 #e1d7a8,0 0 4vw 1vw rgba(255,248,200,.35);opacity:0;transform:translateY(40px)}
+body[data-time="night"] .sun{opacity:0;transform:translateY(60px)}
+body[data-time="night"] .moon{opacity:1;transform:none}
+.stars{position:absolute;inset:0 0 40% 0;z-index:-4;opacity:0;transition:opacity 1.2s}
+body[data-time="night"] .stars{opacity:1}
+.stars i{position:absolute;width:3px;height:3px;border-radius:50%;background:#fff;animation:tw 2.4s ease-in-out infinite}
+.cloud{position:absolute;z-index:-3;width:14vw;min-width:90px;height:3.4vw;min-height:22px;background:#fff;border-radius:99px;opacity:.9;animation:drift linear infinite}
+.cloud::before,.cloud::after{content:"";position:absolute;background:#fff;border-radius:50%}
+.cloud::before{width:42%;height:170%;left:14%;bottom:30%}
+.cloud::after{width:34%;height:130%;right:16%;bottom:35%}
+body[data-time="night"] .cloud{background:#7482c4;opacity:.35}
+body[data-time="night"] .cloud::before,body[data-time="night"] .cloud::after{background:#7482c4}
+.hills{position:absolute;left:0;right:0;bottom:6vh;height:46%;z-index:-2;width:100%}
+.hills .h1{fill:var(--hill1)} .hills .h2{fill:var(--hill2)}
+.trees{position:absolute;left:0;right:0;bottom:7vh;z-index:-1;display:flex;justify-content:space-around;font-size:clamp(28px,4vw,76px);pointer-events:none;opacity:.95}
+body[data-time="night"] .trees{filter:brightness(.55)}
+/* play area */
+.play{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;gap:1.2vh;padding:1.2vh max(16px,1.5vw) 0;min-height:0}
+.hud{display:flex;flex-wrap:wrap;gap:.5em;justify-content:center}
+.pill{background:var(--glass);border:2px solid var(--line);border-radius:999px;padding:.25em .9em;font-weight:800;white-space:nowrap}
+.pill b{font-family:var(--fd);font-size:1.25em}
+.prompt{text-align:center}
+.prompt .pp{display:inline-block;max-width:100%;background:var(--glass);border:2px solid var(--line);border-radius:1.2em;padding:.35em 1.1em}
+.prompt h2{font-family:var(--fd);font-weight:800;font-size:clamp(19px,2.6vw,50px);line-height:1.1;margin:0;text-wrap:balance}
+.prompt p{margin:.1em 0 0;font-size:1em;opacity:.8}
+.prompt .ask{margin-top:.5em;border:0;border-radius:999px;background:var(--ok);color:#fff;font-weight:800;font-size:1.3em;padding:.4em 1.3em;box-shadow:0 .2em 0 rgba(0,0,0,.25)}
+.scn{display:inline-flex;align-items:center;gap:.8em;background:var(--glass);border:3px solid var(--ink);border-radius:1.4em;padding:.5em 1.2em;max-width:100%;text-align:left;animation:pop .4s}
+.scn .big{font-size:clamp(44px,7vw,130px);line-height:1}
+.scn .tx{font-family:var(--fd);font-weight:800;font-size:clamp(18px,2.4vw,46px);line-height:1.1;text-wrap:balance}
+.toast{min-height:1.6em;text-align:center;font-weight:800;font-size:1.15em;text-shadow:0 1px 0 var(--glass)}
+.toast span{display:inline-block;background:var(--glass);border-radius:999px;padding:.1em .9em}
+.toast.bad span{color:var(--bad)} .toast.good span{color:var(--ok)}
+.toast:empty{visibility:hidden}
+/* tokens */
+.tray{display:flex;flex-wrap:wrap;justify-content:center;align-content:flex-start;gap:1.4vh 1.6vw;min-height:calc(var(--tok)*1.5)}
+.tray:empty{min-height:0}
+.tray.explore{--tok:clamp(58px,min(9.8vh,7vw),122px)}
+.tok{position:relative;background:none;border:0;padding:0;display:flex;flex-direction:column;align-items:center;gap:.35em;width:calc(var(--tok)*1.3);touch-action:none;cursor:grab;
+  animation:bob 3.4s ease-in-out infinite;animation-delay:var(--d,0s);transition:transform .3s,opacity .35s}
+.tok .disc{width:var(--tok);aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--glassb);border:.2em solid #fff;
+  box-shadow:0 .35em 0 rgba(0,0,0,.2),0 .9em 1.6em rgba(0,0,0,.2);font-size:calc(var(--tok)*.5);line-height:1;transition:transform .2s,box-shadow .2s}
+body[data-time="night"] .tok .disc{border-color:#9db0ff}
+.tok .nm{background:var(--glass);border-radius:.8em;padding:.1em .6em;font-size:max(12px,calc(var(--tok)*.14));line-height:1.1;text-align:center;font-weight:800}
+.tok:hover .disc{transform:scale(1.08)}
+.tok.sel .disc{border-color:#ffd23f;transform:scale(1.14);box-shadow:0 0 0 .22em rgba(255,210,63,.55),0 1em 1.6em rgba(0,0,0,.25)}
+.tok.seen .disc::after{content:"✓";position:absolute;top:0;right:calc(50% - var(--tok)/2 - .1em);width:1.5em;height:1.5em;border-radius:50%;background:var(--ok);color:#fff;font-size:calc(var(--tok)*.2);display:flex;align-items:center;justify-content:center;font-family:var(--fb)}
+.tok.done{opacity:0;pointer-events:none;transform:scale(.3)}
+.tok.right .disc{background:#c9f7de;border-color:var(--ok);animation:pulse .6s}
+.tok.shake{animation:shake .45s}
+.ghost{position:fixed;z-index:80;pointer-events:none;font-size:clamp(60px,9vw,130px);line-height:1;transform:translate(-50%,-60%) rotate(-6deg) scale(1.1);filter:drop-shadow(0 .4em .3em rgba(0,0,0,.35))}
+/* buildings */
+.bins{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.4vw;align-items:end;margin-top:auto;padding-top:1vh;max-width:1500px;width:100%;align-self:center}
+.bin{position:relative;background:none;border:0;padding:0;display:flex;flex-direction:column;align-items:center;transition:transform .2s,filter .2s;min-width:0}
+.bin svg{width:100%;max-height:34vh;min-height:90px;display:block;filter:drop-shadow(0 .5em .5em rgba(0,0,0,.25))}
+.bin svg text{font-family:"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif}
+.bin .w{fill:var(--win);stroke:#8fa8bd;stroke-width:2;transition:fill 1s}
+.bin:hover{transform:translateY(-.3em)}
+.bin.over{transform:translateY(-.5em) scale(1.05);filter:drop-shadow(0 0 1.2em #ffd23f)}
+.bin.pulse{animation:pulse .6s} .bin.shake{animation:shake .45s}
+.plate{margin-top:-.4em;display:flex;align-items:center;gap:.5em;background:var(--glassb);border:.18em solid var(--c);border-radius:1em;padding:.15em .7em .15em .2em;box-shadow:0 .25em 0 rgba(0,0,0,.2);max-width:100%}
+.plate b{font-family:var(--fd);font-size:clamp(20px,2.6vw,52px);line-height:1;background:var(--c);color:#fff;border-radius:.7em;padding:.05em .45em}
+.plate span{font-weight:800;font-size:clamp(12px,1.5vw,30px);line-height:1.05;text-align:left}
+.bin[data-cat="med"]{--c:var(--med)} .bin[data-cat="fire"]{--c:var(--fire)} .bin[data-cat="pol"]{--c:var(--pol)}
+.mini{display:flex;flex-wrap:wrap;gap:.1em;justify-content:center;min-height:1.6em;font-size:clamp(16px,2vw,36px);line-height:1;margin-top:.2em}
+/* road */
+.road{position:relative;height:clamp(52px,9vh,110px);background:var(--road);z-index:1;overflow:hidden;margin-top:.6vh;border-top:.3em solid #8a97a8}
+.road::before{content:"";position:absolute;left:0;right:0;top:55%;height:.3em;background:repeating-linear-gradient(90deg,#f7e27a 0 4em,transparent 4em 8em)}
+.car{position:absolute;bottom:18%;font-size:clamp(34px,5.5vh,84px);line-height:1;left:0;animation:cruise linear infinite;will-change:transform}
+/* lesson card */
+.ov{position:fixed;inset:0;z-index:90;background:rgba(6,18,40,.62);display:none;align-items:center;justify-content:center;
+  padding:16px max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px))}
+.ov.on{display:flex}
+.card{width:min(620px,100%,92vw);max-height:100%;overflow:auto;background:var(--glassb);color:var(--ink);border:4px solid var(--ink);border-radius:1.6em;padding:1em;text-align:center;animation:pop .35s;box-shadow:0 .4em 0 var(--ink)}
+@media(min-width:1500px){.card{width:min(860px,60vw)}}
+.stage{position:relative;height:clamp(130px,24vh,280px);border-radius:1.1em;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.stage.med{background:linear-gradient(180deg,#ff9aa9,#ff5d73)} .stage.fire{background:linear-gradient(180deg,#ffd27a,#ff9f1c)} .stage.pol{background:linear-gradient(180deg,#8bb6ff,#3b82f6)}
+.stage .em{font-size:clamp(70px,13vh,170px);line-height:1;position:relative;z-index:2}
+.stage .wv{position:absolute;left:50%;top:50%;width:30%;aspect-ratio:1;border:.35em solid rgba(255,255,255,.7);border-radius:50%;transform:translate(-50%,-50%) scale(.3);opacity:0}
+.stage.playing .wv{animation:wave 1.5s ease-out infinite}
+.stage.playing .wv:nth-child(2){animation-delay:.5s} .stage.playing .wv:nth-child(3){animation-delay:1s}
+.stage .lamp{position:absolute;top:.3em;font-size:2em;animation:blink .5s steps(2) infinite}
+.stage .lamp.l{left:.4em} .stage .lamp.r{right:.4em;animation-delay:.25s}
+.stage .rd{position:absolute;left:0;right:0;bottom:0;height:.7em;background:rgba(0,0,0,.3)}
+.a-drive{position:absolute!important;bottom:.5em;left:0;animation:drive 3s linear infinite}
+.a-beat{animation:beat .8s ease-in-out infinite} .a-bounce{animation:bounce .7s ease-in-out infinite}
+.a-fly{animation:fly 2.6s ease-in-out infinite} .a-shake{animation:wob .25s linear infinite}
+.a-sway{animation:sway 1.2s ease-in-out infinite;transform-origin:50% 100%} .a-ring{animation:ring .18s linear infinite}
+.a-blink{animation:pulse .9s ease-in-out infinite}
+.say{font-family:var(--fd);font-weight:800;font-size:clamp(24px,3.4vw,60px);line-height:1.1;margin:.3em 0 0;color:var(--ink);min-height:1.2em}
+.say.show{animation:pop .4s}
+.card h2{font-family:var(--fd);font-weight:800;font-size:clamp(22px,2.4vw,46px);margin:.2em 0 .1em;line-height:1.1}
+.badge{display:inline-block;font-weight:800;border-radius:999px;padding:.1em .9em;color:#fff;background:var(--b)}
+.badge.med{--b:var(--med)} .badge.fire{--b:#e08400} .badge.pol{--b:var(--pol)}
+.card p{margin:.5em 0 .8em;font-size:clamp(16px,1.6vw,30px);line-height:1.35}
+.row{display:flex;gap:.5em;justify-content:center;flex-wrap:wrap}
+.card button{border:3px solid var(--ink);background:var(--glassb);border-radius:999px;padding:.4em 1em;font-weight:800;font-size:1.05em}
+.card button.go{background:var(--ok);color:#fff;border-color:var(--ok)}
+.end .stats{display:flex;gap:.8em;justify-content:center;margin:.6em 0;flex-wrap:wrap}
+.end .stats div{background:var(--sky2);color:#10304a;border-radius:1em;padding:.4em 1.2em;font-size:1em}
+.end .stats b{display:block;font-family:var(--fd);font-size:2em;line-height:1.1}
+.stars3{font-size:2.6em;letter-spacing:.1em}
+.confetti{position:fixed;top:-30px;font-size:clamp(24px,3vw,50px);z-index:95;pointer-events:none;animation:fall 3.2s linear forwards}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-.5em)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes tw{0%,100%{opacity:.25}50%{opacity:1}}
+@keyframes drift{from{transform:translateX(-25vw)}to{transform:translateX(125vw)}}
+@keyframes cruise{from{transform:translateX(105vw)}to{transform:translateX(-12vw)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-10px)}40%{transform:translateX(10px)}60%{transform:translateX(-7px)}80%{transform:translateX(7px)}}
+@keyframes pulse{0%{transform:scale(1)}45%{transform:scale(1.12)}100%{transform:scale(1)}}
+@keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes blink{0%{opacity:1}100%{opacity:.2}}
+@keyframes wave{0%{transform:translate(-50%,-50%) scale(.3);opacity:.9}100%{transform:translate(-50%,-50%) scale(3.2);opacity:0}}
+@keyframes drive{0%{transform:translateX(-120px)}100%{transform:translateX(620px)}}
+@keyframes beat{0%,100%{transform:scale(1)}15%{transform:scale(1.22)}30%{transform:scale(1)}45%{transform:scale(1.15)}}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-14%)}}
+@keyframes fly{0%,100%{transform:translate(-110px,8px)}50%{transform:translate(110px,-14px)}}
+@keyframes wob{0%,100%{transform:translateX(-4px) rotate(-4deg)}50%{transform:translateX(4px) rotate(4deg)}}
+@keyframes sway{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(14deg)}}
+@keyframes ring{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(14deg)}}
+@keyframes fall{to{transform:translateY(115vh) rotate(540deg)}}
+@media(max-width:700px){.plate{flex-direction:column;gap:.15em;padding:.2em .4em;text-align:center}.plate span{font-size:11px;text-align:center}.plate b{font-size:20px}.brand h1{font-size:1.25em}.brand p{display:none}.scene{min-height:0}.bin svg{max-height:22vh}}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="top">
+    <div class="brand"><span class="logo">🚨</span><div><h1>Shoshilinch xizmatlar olami</h1><p>101 · 102 · 103</p></div></div>
+    <nav class="modes" id="modes" aria-label="O'yin turlari">
+      <button type="button" data-m="explore" aria-selected="true">🔎 Tanishuv</button>
+      <button type="button" data-m="sort" aria-selected="false">🧩 Saralash</button>
+      <button type="button" data-m="sound" aria-selected="false">👂 Ovozni top</button>
+      <button type="button" data-m="number" aria-selected="false">📞 Qaysi raqam?</button>
+    </nav>
+    <div class="ctl">
+      <button type="button" id="bSound" aria-pressed="true" title="Ovoz">🔊</button>
+      <button type="button" id="bMusic" aria-pressed="false" title="Musiqa">🎵</button>
+      <button type="button" id="bTime" title="Kun / tun">🌙</button>
+      <button type="button" id="bFull" title="To'liq ekran">⛶</button>
+      <button type="button" id="bReset" title="Qayta boshlash">↻</button>
+    </div>
+  </header>
+
+  <main class="scene" id="scene">
+    <div class="sky d"></div><div class="sky n"></div>
+    <div class="sun"></div><div class="moon"></div><div class="stars" id="stars"></div>
+    <div class="cloud" style="top:9%;animation-duration:70s;animation-delay:-20s"></div>
+    <div class="cloud" style="top:20%;animation-duration:95s;animation-delay:-60s;transform:scale(.7)"></div>
+    <div class="cloud" style="top:5%;animation-duration:120s;animation-delay:-90s;transform:scale(1.2)"></div>
+    <svg class="hills" viewBox="0 0 1000 200" preserveAspectRatio="none" aria-hidden="true">
+      <path class="h2" d="M0 120 C120 60 260 140 420 90 S720 40 1000 110 L1000 200 L0 200Z"/>
+      <path class="h1" d="M0 160 C160 100 300 170 520 130 S850 90 1000 150 L1000 200 L0 200Z"/>
+    </svg>
+    <div class="trees" aria-hidden="true"><span>🌳</span><span>🌲</span><span>🌳</span><span>🌴</span><span>🌲</span><span>🌳</span></div>
+
+    <section class="play">
+      <div class="hud">
+        <span class="pill">⭐ <b id="hScore">0</b></span>
+        <span class="pill" id="hStage">Tanishuv</span>
+        <span class="pill">⏱ <b id="hTime">0:00</b></span>
+      </div>
+      <div class="prompt" id="prompt"></div>
+      <div class="tray" id="tray"></div>
+      <div class="toast" id="toast" role="status"></div>
+      <div class="bins" id="bins"></div>
+    </section>
+
+    <div class="road" aria-hidden="true">
+      <span class="car" style="animation-duration:15s;animation-delay:-3s">🚑</span>
+      <span class="car" style="animation-duration:22s;animation-delay:-14s">🚒</span>
+      <span class="car" style="animation-duration:18s;animation-delay:-9s">🚓</span>
+      <span class="car" style="animation-duration:28s;animation-delay:-20s">🚌</span>
+      <span class="car" style="animation-duration:12s;animation-delay:-6s">🚕</span>
+    </div>
+  </main>
+</div>
+
+<div class="ov" id="ov"><div class="card" id="card"></div></div>
+
+<script>
+const CATS={
+  med:{name:"Tez tibbiy yordam",short:"Tez yordam",num:"103",ic:"🚑",snd:"ambulance"},
+  fire:{name:"Yong'in xavfsizligi",short:"O't o'chirish",num:"101",ic:"🚒",snd:"firetruck"},
+  pol:{name:"Ichki ishlar",short:"Militsiya",num:"102",ic:"🚓",snd:"police"}
+};
+const ITEMS=[
+  {id:"ambulance",e:"🚑",n:"Tez yordam mashinasi",c:"med",anim:"drive",say:"Nii-naa! Nii-naa!",t:`Kasal yoki jarohatlangan odamni tez shifoxonaga olib boradi. Uni chaqirish uchun 103 raqamiga qo'ng'iroq qilinadi.`},
+  {id:"stetho",e:"🩺",n:"Stetoskop",c:"med",anim:"beat",say:"Tuk-tuk! Tuk-tuk!",t:`Shifokor stetoskop bilan yurak va o'pka ovozini eshitadi. Yurak shunday uradi: tuk-tuk, tuk-tuk.`},
+  {id:"plaster",e:"🩹",n:"Plastir",c:"med",anim:"bounce",say:"Krrrt! Pat!",t:`Plastir kichik jarohatni yopib, toza saqlaydi. Qo'lingiz shilinsa, kattalarga ayting.`},
+  {id:"doctor",e:"🧑‍⚕️",n:"Shifokor",c:"med",anim:"beat",say:"Pip... Pip... Pip...",t:`Shifokor kasallarni davolaydi va ularga yordam beradi. Shifokordan qo'rqmaymiz!`},
+  {id:"heli",e:"🚁",n:"Tez yordam vertolyoti",c:"med",anim:"fly",say:"Pat-pat-pat-pat!",t:`Vertolyot uzoq yoki yetib bo'lmaydigan joydagi og'ir kasalni tez shifoxonaga yetkazadi.`},
+  {id:"firetruck",e:"🚒",n:"O't o'chirish mashinasi",c:"fire",anim:"drive",say:"Tuuut! Vuuu-vuuu!",t:`Yong'in bo'lsa, suv va narvon bilan tez yetib keladi. Uni chaqirish uchun 101 raqamiga qo'ng'iroq qilinadi.`},
+  {id:"extinguisher",e:"🧯",n:"O't o'chirgich",c:"fire",anim:"shake",say:"Pshshshsh!",t:`Kichik yong'inni o'chiradi. Bolalar uni o'zlari ishlatmaydi, kattalarni chaqiradi.`},
+  {id:"firefighter",e:"🧑‍🚒",n:"O't o'chiruvchi",c:"fire",anim:"bounce",say:"Shuvvv! Shuvvv!",t:`O't o'chiruvchi olovdan qo'rqmaydi. U suv sepib yong'inni o'chiradi va odamlarni qutqaradi.`},
+  {id:"ladder",e:"🪜",n:"Narvon",c:"fire",anim:"sway",say:"Tang! Tang! Tang!",t:`Baland uydan odamlarni xavfsiz tushirish uchun o't o'chiruvchilar narvon ishlatadi.`},
+  {id:"bell",e:"🔔",n:"Yong'in signali",c:"fire",anim:"ring",say:"Dring-dring-dring!",t:`Signal tutunni sezsa qattiq jiringlaydi. Jiringlasa, darrov tashqariga chiqamiz va 101 ga qo'ng'iroq qilamiz.`},
+  {id:"police",e:"🚓",n:"Militsiya mashinasi",c:"pol",anim:"drive",say:"Vi-vi-vi-vi-vi!",t:`Tartibni saqlaydi va yordam kerak bo'lsa tez yetib keladi. Militsiyani chaqirish uchun 102 raqamiga qo'ng'iroq qilinadi.`},
+  {id:"whistle",e:"👮",n:"Militsioner",c:"pol",anim:"bounce",say:"Tiiiit! Tit!",t:`Militsioner odamlarni himoya qiladi va yo'lda tartibni kuzatadi. U hushtak chalib ogohlantiradi.`},
+  {id:"traffic",e:"🚦",n:"Svetofor",c:"pol",anim:"blink",say:"Pip-pip-pip!",t:`Svetofor yo'lda harakatni boshqaradi. Qizil chiroqda to'xtaymiz, yashil chiroqda o'tamiz.`},
+  {id:"radio",e:"📻",n:"Ratsiya",c:"pol",anim:"shake",say:"Krrr... Pip! Pip!",t:`Ratsiya orqali militsionerlar bir-biri bilan tez gaplashadi.`},
+  {id:"dog",e:"🐕‍🦺",n:"Xizmat iti",c:"pol",anim:"bounce",say:"Hov-hov! Auuuu!",t:`Xizmat iti militsionerlarga yordam beradi: yo'qolgan narsani topadi va tartibni saqlaydi.`}
+];
+const SCEN=[
+  {e:"🏠🔥",t:"Uyda yong'in chiqdi!",c:"fire",why:"Yong'in bo'lsa 101 ga qo'ng'iroq qilinadi. O't o'chiruvchilar suv bilan yetib keladi."},
+  {e:"🤕",t:"Bola yiqilib, oyog'ini sindirdi.",c:"med",why:"Odam jarohatlansa yoki kasal bo'lsa, 103 ga qo'ng'iroq qilinadi."},
+  {e:"🦹",t:"Begona odam kimningdir sumkasini tortib oldi.",c:"pol",why:"O'g'rilik va tartibsizlikda 102 ga qo'ng'iroq qilinadi."},
+  {e:"💨",t:"Qo'shni uyning derazasidan qora tutun chiqyapti.",c:"fire",why:"Tutun yoki olov ko'rsangiz, darrov 101 ga qo'ng'iroq qilinadi."},
+  {e:"🌡️",t:"Singlimning isitmasi juda baland, ahvoli yomon.",c:"med",why:"Ahvol og'ir bo'lsa, 103 ga qo'ng'iroq qilib shifokorni chaqiramiz."},
+  {e:"😢",t:"Kichkina bola ko'chada yo'qolib qoldi.",c:"pol",why:"Yo'qolgan bola uchun 102 ga qo'ng'iroq qilinadi. Militsiya uni topishga yordam beradi."},
+  {e:"⚡🔥",t:"Elektr simidan uchqun chiqib, yonib ketdi.",c:"fire",why:"Olov chiqsa 101 ga qo'ng'iroq qilamiz. O'zimiz o'chirishga urinmaymiz."},
+  {e:"😵",t:"Dadam hushidan ketib, yiqilib tushdi.",c:"med",why:"Odam hushidan ketsa, 103 ga zudlik bilan qo'ng'iroq qilinadi."},
+  {e:"🚪🥷",t:"Kimdir qo'shnining eshigini sindirmoqda.",c:"pol",why:"Shubhali holatda 102 ga qo'ng'iroq qilinadi."}
+];
+const BUILD={
+med:`<svg viewBox="0 0 220 200" aria-hidden="true"><rect x="22" y="44" width="176" height="16" rx="6" fill="#dfe9f2" stroke="#8fa8bd" stroke-width="3"/><rect x="32" y="56" width="156" height="140" fill="#f6f9fc" stroke="#8fa8bd" stroke-width="3"/><rect x="85" y="4" width="50" height="50" rx="11" fill="#ff5d73" stroke="#b4233d" stroke-width="3"/><rect x="104" y="13" width="12" height="32" rx="2" fill="#fff"/><rect x="94" y="23" width="32" height="12" rx="2" fill="#fff"/>${[44,80,116,152].map(x=>[70,104].map(y=>`<rect class="w" x="${x}" y="${y}" width="24" height="22" rx="3"/>`).join('')).join('')}<path d="M90 196V166a20 20 0 0 1 40 0V196z" fill="#8fd3f4" stroke="#8fa8bd" stroke-width="3"/><rect x="108" y="150" width="4" height="46" fill="#8fa8bd"/></svg>`,
+fire:`<svg viewBox="0 0 220 200" aria-hidden="true"><rect x="146" y="24" width="40" height="44" fill="#c53b31" stroke="#8d1f18" stroke-width="3"/><path d="M142 26L166 4L190 26z" fill="#8d1f18"/><circle cx="166" cy="45" r="9" fill="#ffcc33" stroke="#b88a00" stroke-width="2"/><rect x="22" y="56" width="176" height="14" rx="5" fill="#b8312a"/><rect x="32" y="66" width="156" height="130" fill="#e5483b" stroke="#8d1f18" stroke-width="3"/><rect x="48" y="98" width="104" height="98" fill="#3b4558"/><text x="100" y="190" font-size="64" text-anchor="middle">🚒</text><rect x="48" y="98" width="104" height="30" fill="#d3dbe6" stroke="#8896a8" stroke-width="3"/><path d="M48 113H152" stroke="#8896a8" stroke-width="2"/><rect class="w" x="160" y="100" width="22" height="22" rx="3"/><text x="100" y="90" font-size="24" text-anchor="middle">🔥</text></svg>`,
+pol:`<svg viewBox="0 0 220 200" aria-hidden="true"><line x1="110" y1="4" x2="110" y2="52" stroke="#6b7a90" stroke-width="3"/><rect x="111" y="6" width="38" height="22" fill="#ffd23f" stroke="#b88a00" stroke-width="2"/><rect x="22" y="50" width="176" height="14" rx="5" fill="#2f56b8"/><rect x="32" y="60" width="156" height="136" fill="#4f80ea" stroke="#1f3f8f" stroke-width="3"/><circle cx="110" cy="96" r="24" fill="#ffd23f" stroke="#b88a00" stroke-width="3"/><text x="110" y="108" font-size="32" text-anchor="middle" fill="#1f3f8f">★</text><rect class="w" x="44" y="78" width="28" height="22" rx="3"/><rect class="w" x="148" y="78" width="28" height="22" rx="3"/><rect class="w" x="44" y="114" width="28" height="22" rx="3"/><rect class="w" x="148" y="114" width="28" height="22" rx="3"/><rect x="88" y="140" width="44" height="56" fill="#dbe8ff" stroke="#1f3f8f" stroke-width="3"/><path d="M110 140V196" stroke="#1f3f8f" stroke-width="3"/></svg>`
+};
+
+/* ===== helpers ===== */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const tray=$("#tray"),prompt_=$("#prompt"),binsEl=$("#bins"),toast=$("#toast"),ov=$("#ov"),card=$("#card");
+const S={mode:"explore",soundOn:true,musicOn:false,first:0,score:0,total:0,stage:0,found:new Set(),sel:null,busy:false,t0:0,timer:null,fin:false,round:0,order:[],cur:null,miss:false};
+
+/* ===== audio: every item has its own synthesized sound (horn/siren physics, Doppler pass-by, room reverb) ===== */
+let AC=null,master=null,revSend=null,live=[],nbuf=null,WV={};
+function initChain(){
+  nbuf=null;WV={};master=AC.createGain();master.gain.value=.95;
+  const comp=AC.createDynamicsCompressor();comp.threshold.value=-20;comp.knee.value=16;comp.ratio.value=5;comp.attack.value=.004;comp.release.value=.2;
+  master.connect(comp);comp.connect(AC.destination);
+  const len=Math.floor(AC.sampleRate*1.5),imp=AC.createBuffer(2,len,AC.sampleRate);
+  for(let c=0;c<2;c++){const d=imp.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.8)}
+  const cv=AC.createConvolver();cv.buffer=imp;revSend=AC.createGain();revSend.gain.value=.2;
+  const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=3500;revSend.connect(cv);cv.connect(lp);lp.connect(master)}
+function A(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)();initChain()}catch(e){AC=null;return null}}
+  if(AC.state==="suspended")AC.resume();return AC}
+function env(g,t,d,v,a){g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+(a||.01));g.gain.exponentialRampToValueAtTime(.0001,t+d)}
+function osc(b,type,f0,f1,t,d,v,a){const o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.setValueAtTime(f0,t);
+  if(f1&&f1!==f0)o.frequency.exponentialRampToValueAtTime(f1,t+d);env(g,t,d,v,a);o.connect(g);g.connect(b);o.start(t);o.stop(t+d+.05);return o}
+function nz(b,t,d,v,type,f0,f1,q,a){if(!nbuf){nbuf=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate);const x=nbuf.getChannelData(0);for(let i=0;i<x.length;i++)x[i]=Math.random()*2-1}
+  const s=AC.createBufferSource();s.buffer=nbuf;s.loop=true;const f=AC.createBiquadFilter();f.type=type;f.frequency.setValueAtTime(f0,t);if(f1&&f1!==f0)f.frequency.linearRampToValueAtTime(f1,t+d);f.Q.value=q||1;
+  const g=AC.createGain();env(g,t,d,v,a||.02);s.connect(f);f.connect(g);g.connect(b);s.start(t,Math.random());s.stop(t+d+.05)}
+function W(k){if(WV[k])return WV[k];const N=64,re=new Float32Array(N+1),im=new Float32Array(N+1);
+  for(let n=1;n<=N;n++)im[n]=k==="sq"?(n%2?1/n:0):k==="horn"?(1/Math.pow(n,.75))*(n%2?1:.5):1/n;
+  return WV[k]=AC.createPeriodicWave(re,im)}
+let _sc=null;function shaperCurve(){if(_sc)return _sc;const n=1024,c=new Float32Array(n);for(let i=0;i<n;i++){const x=i/(n-1)*2-1;c[i]=Math.tanh(2.2*x)}return _sc=c}
+/* a vehicle driving past the listener: distance, air absorption, stereo pan and Doppler pitch shift */
+function mkPass(b,t,dur){const inp=AC.createGain(),lp=AC.createBiquadFilter(),g=AC.createGain(),dop=AC.createConstantSource();let pn=null;
+  try{pn=AC.createStereoPanner()}catch(e){}
+  lp.type="lowpass";const N=96,gc=new Float32Array(N),fc=new Float32Array(N),pc=new Float32Array(N),dc=new Float32Array(N);
+  for(let i=0;i<N;i++){const x=i/(N-1)*2-1,k=1/(1+7*x*x);gc[i]=.18+.82*k;fc[i]=1800+7000*k;pc[i]=x*.85;dc[i]=-170*Math.tanh(5*x)}
+  g.gain.setValueCurveAtTime(gc,t,dur);lp.frequency.setValueCurveAtTime(fc,t,dur);dop.offset.setValueCurveAtTime(dc,t,dur);
+  inp.connect(lp);lp.connect(g);if(pn){pn.pan.setValueCurveAtTime(pc,t,dur);g.connect(pn);pn.connect(b)}else g.connect(b);
+  dop.start(t);dop.stop(t+dur+.1);return{inp,dop}}
+function hornVoice(P,t,dur,vol,fn,kind){const o=AC.createOscillator();o.setPeriodicWave(W(kind||"horn"));fn(o.frequency,t);
+  const sh=AC.createWaveShaper();sh.curve=shaperCurve();
+  const pk=AC.createBiquadFilter();pk.type="peaking";pk.frequency.value=1400;pk.Q.value=1.1;pk.gain.value=7;
+  const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=5200;
+  const g=AC.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.06);g.gain.setValueAtTime(vol,t+dur-.12);g.gain.linearRampToValueAtTime(0,t+dur);
+  o.connect(sh);sh.connect(pk);pk.connect(lp);lp.connect(g);g.connect(P.inp);P.dop.connect(o.detune);o.start(t);o.stop(t+dur+.05);return o}
+/* voice-like source: glottal saw through formant filters */
+function voice(b,t,d,pf,fm,v,kind,vib,att){const o=AC.createOscillator();o.setPeriodicWave(W(kind||"saw"));pf(o.frequency,t);
+  if(vib){const l=AC.createOscillator(),lg=AC.createGain();l.frequency.value=vib[0];lg.gain.value=vib[1];l.connect(lg);lg.connect(o.frequency);l.start(t);l.stop(t+d+.05)}
+  const g=AC.createGain();env(g,t,d,v,att||.012);
+  fm.forEach(([f,q,a])=>{const bp=AC.createBiquadFilter();bp.type="bandpass";bp.frequency.value=f;bp.Q.value=q;const ga=AC.createGain();ga.gain.value=a;o.connect(bp);bp.connect(ga);ga.connect(g)});
+  g.connect(b);o.start(t);o.stop(t+d+.05);return o}
+const SND={
+ ambulance(b,t){const D=6,P=mkPass(b,t,D);
+   [0,5].forEach(dt=>hornVoice(P,t,D,.22,(f,s)=>{for(let i=0;i*.55<D;i++)f.setTargetAtTime(i%2?585+dt:438+dt,s+i*.55,.015)},"horn"));return D+.3},
+ firetruck(b,t){const D=8,P=mkPass(b,t,D);
+   [[0,.95],[1.1,.7]].forEach(([s,d])=>[233,293.7,349.2].forEach((fq,j)=>hornVoice(P,t+s,d,.13,(f,x)=>f.setValueAtTime(fq*(1+.002*j),x),"saw")));
+   hornVoice(P,t+2.2,D-2.2,.22,(f,s)=>{let x=s,up=true;f.setValueAtTime(480,x);while(x<s+D-2.3){f.exponentialRampToValueAtTime(up?1250:480,x+1.7);x+=1.7;up=!up}},"horn");return D+.3},
+ police(b,t){const D=6.4,P=mkPass(b,t,D);
+   hornVoice(P,t,D,.2,(f,s)=>{f.setValueAtTime(640,s);f.exponentialRampToValueAtTime(1450,s+1.5);f.exponentialRampToValueAtTime(640,s+3);let y=s+3.2;for(let i=0;i<12;i++){f.setValueAtTime(700,y);f.exponentialRampToValueAtTime(1500,y+.24);y+=.25}},"horn");return D+.3},
+ heli(b,t){const D=5,P=mkPass(b,t,D);
+   for(let i=0;i<54;i++){const s=t+i*.092;nz(P.inp,s,.07,1,"lowpass",380,300,.8,.004);osc(P.inp,"sine",62,44,s,.09,.8,.004);nz(P.inp,s,.025,.18,"bandpass",1300,1300,1.2,.002)}
+   nz(P.inp,t,D,.05,"highpass",4500,4500,.5,.5);osc(P.inp,"sine",2400,2600,t,D,.015,.5);return D+.3},
+ stetho(b,t){const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=480;lp.connect(b);
+   for(let i=0;i<5;i++){const s=t+i*.85;osc(lp,"sine",82,48,s,.14,1,.005);osc(lp,"triangle",160,90,s,.1,.45,.004);nz(lp,s,.08,.5,"lowpass",260,220,1,.004);
+     osc(lp,"sine",100,58,s+.25,.1,.8,.004);osc(lp,"triangle",190,110,s+.25,.08,.35,.004)}return 4.4},
+ doctor(b,t){for(let i=0;i<5;i++){const s=t+i*.75;osc(b,"sine",1000,1000,s,.13,.3,.004);osc(b,"sine",2000,2000,s,.13,.06,.004)}return 3.8},
+ plaster(b,t){nz(b,t,.55,.35,"highpass",2200,5000,.8,.04);for(let k=0;k<70;k++)nz(b,t+Math.random()*.5,.012,.25+Math.random()*.3,"highpass",2500+Math.random()*2500,4000,1,.002);
+   osc(b,"triangle",230,110,t+.78,.12,.9,.004);nz(b,t+.78,.07,.6,"lowpass",900,500,1,.004);return 1.1},
+ extinguisher(b,t){nz(b,t,.03,.9,"highpass",3200,3200,1,.002);osc(b,"sine",1900,1700,t,.06,.3,.002);
+   nz(b,t+.1,3,.7,"bandpass",3800,2800,.6,.02);nz(b,t+.1,3,.45,"lowpass",700,500,.7,.03);nz(b,t+.1,3,.25,"highpass",6000,5000,.5,.05);return 3.3},
+ firefighter(b,t){for(let i=0;i<50;i++)nz(b,t+Math.random()*2.4,.02,.2+Math.random()*.3,"highpass",2000+Math.random()*2000,3000,1,.002);
+   osc(b,"sawtooth",46,50,t,3.2,.14,.3);nz(b,t+.5,2.8,.6,"bandpass",2200,2600,.5,.4);nz(b,t+.5,2.8,.3,"highpass",4200,4200,.5,.5);nz(b,t+.5,2.8,.25,"lowpass",500,400,.6,.4);return 3.5},
+ ladder(b,t){nz(b,t,.5,.25,"bandpass",2500,4000,1,.1);
+   for(let i=0;i<6;i++){const s=t+.15+i*.23,k=1+i*.035;[[820,.7],[1330,.5],[2200,.3],[3300,.15]].forEach(([f,a])=>nz(b,s,.32,a*5,"bandpass",f*k,f*k,22,.002));nz(b,s,.015,.6,"highpass",3000,3000,1,.001)}return 2},
+ bell(b,t){for(let i=0;i<42;i++){const s=t+i*.047;[[1,.3],[2.76,.22],[5.4,.12],[8.93,.07]].forEach(([r,a])=>osc(b,"sine",1050*r,1050*r,s,.13,a*(.8+Math.random()*.4),.002))}return 2.2},
+ whistle(b,t){[[0,.22],[.32,.22],[.64,.7]].forEach(([s,d])=>{const T=t+s,o=AC.createOscillator(),g=AC.createGain(),l=AC.createOscillator(),lg=AC.createGain();
+   o.type="sine";o.frequency.setValueAtTime(2750,T);o.frequency.linearRampToValueAtTime(3000,T+.05);l.frequency.value=34;lg.gain.value=190;l.connect(lg);lg.connect(o.frequency);
+   env(g,T,d,.32,.015);o.connect(g);g.connect(b);o.start(T);l.start(T);o.stop(T+d+.05);l.stop(T+d+.05);nz(b,T,d,.2,"bandpass",3300,3300,5,.02)});return 1.5},
+ traffic(b,t){for(let i=0;i<6;i++)osc(b,"sine",1000,1000,t+i*.32,.14,.3,.004);for(let i=0;i<10;i++)osc(b,"sine",1000,1000,t+2+i*.12,.07,.3,.003);return 3.4},
+ radio(b,t){const rf=AC.createBiquadFilter();rf.type="bandpass";rf.frequency.value=1500;rf.Q.value=.55;const og=AC.createGain();og.gain.value=2;rf.connect(og);og.connect(b);
+   nz(rf,t,.18,.6,"bandpass",2000,2000,.5,.005);osc(rf,"sine",1200,1200,t+.2,.09,.3,.004);
+   const V=[[730,1090],[270,2290],[570,840],[300,870],[660,1720],[400,1900]];
+   for(let i=0;i<11;i++){const s=t+.45+i*.19,v=V[(i*5+2)%6],p=108+Math.random()*30,p2=p*(.9+Math.random()*.25);
+     voice(rf,s,.16,(f,x)=>{f.setValueAtTime(p,x);f.linearRampToValueAtTime(p2,x+.16)},[[v[0],6,1.2],[v[1],8,.8],[2400,6,.2]],.5,"saw")}
+   nz(rf,t+.45,2.1,.04,"bandpass",1800,1800,1,.2);nz(rf,t+2.7,.28,.5,"bandpass",2200,1500,.5,.01);osc(rf,"sine",1200,1200,t+2.55,.09,.25,.004);return 3.1},
+ dog(b,t){const B=(s,p,v)=>{voice(b,s,.22,(f,x)=>{f.setValueAtTime(p*1.35,x);f.exponentialRampToValueAtTime(p*.8,x+.18)},[[680,5,1.3],[1350,6,.8],[2400,5,.25]],v,"saw");nz(b,s,.1,v*.5,"bandpass",1500,1000,1.2,.006)};
+   B(t,330,.9);B(t+.42,350,.9);B(t+.84,320,.8);
+   voice(b,t+1.6,1.9,(f,x)=>{f.setValueAtTime(330,x);f.linearRampToValueAtTime(700,x+.75);f.linearRampToValueAtTime(480,x+1.9)},[[700,5,1.2],[1250,6,.7]],.7,"saw",[6,16],.25);return 3.7}
+};
+function stopSfx(){if(!AC)return;const n=AC.currentTime;live.forEach(b=>{try{b.gain.cancelScheduledValues(n);b.gain.setTargetAtTime(0,n,.02)}catch(e){}});live=[]}
+function playSnd(id){if(!S.soundOn||!SND[id])return 0;if(!A())return 0;stopSfx();const b=AC.createGain();b.connect(master);b.connect(revSend);live.push(b);return SND[id](b,AC.currentTime+.04)}
+function chime(){if(!S.soundOn||!A())return;const b=AC.createGain();b.connect(master);[660,880,1100].forEach((f,i)=>osc(b,"triangle",f,f,AC.currentTime+i*.09,.2,.25,.01))}
+function buzz(){if(!S.soundOn||!A())return;const b=AC.createGain();b.connect(master);osc(b,"sawtooth",170,110,AC.currentTime,.3,.14,.01)}
+/* background music */
+const MEL=[392,440,523,659,523,440,392,330,392,440,523,587,523,440,392,330];let mi=0,musicT=null;
+function music(){clearInterval(musicT);if(!S.musicOn)return;musicT=setInterval(()=>{if(!A())return;const b=AC.createGain();b.connect(master);osc(b,"triangle",MEL[mi++%MEL.length],MEL[(mi-1)%MEL.length],AC.currentTime,.34,.05,.02)},380)}
+/* speech (Uzbek or similar voice if the device has one) */
+let voices=[];function loadV(){try{voices=speechSynthesis.getVoices()}catch(e){}}
+try{loadV();speechSynthesis.onvoiceschanged=loadV}catch(e){}
+const pickV=()=>voices.find(v=>/^uz/i.test(v.lang))||voices.find(v=>/^tr/i.test(v.lang));
+function stopSpeech(){try{speechSynthesis.cancel()}catch(e){}}
+function speak(txt,cb){let fired=false;const go=()=>{if(!fired){fired=true;cb&&cb()}};
+  if(!S.soundOn){go();return}
+  try{const v=pickV();if(!v){go();return}stopSpeech();const u=new SpeechSynthesisUtterance(txt);u.voice=v;u.lang=v.lang;u.rate=.85;u.onend=go;u.onerror=go;speechSynthesis.speak(u);setTimeout(go,Math.min(9000,1500+txt.length*95))}catch(e){go()}}
+
+/* ===== scene setup ===== */
+(function(){const st=$("#stars");for(let i=0;i<70;i++){const s=document.createElement("i");s.style.left=Math.random()*100+"%";s.style.top=Math.random()*100+"%";s.style.animationDelay=(Math.random()*2.4).toFixed(2)+"s";const z=1+Math.random()*2.5;s.style.width=s.style.height=z+"px";st.appendChild(s)}})();
+Object.keys(CATS).forEach(k=>{const c=CATS[k],b=document.createElement("button");b.type="button";b.className="bin";b.dataset.cat=k;b.setAttribute("aria-label",c.name+" "+c.num);
+  b.innerHTML=BUILD[k]+`<div class="plate"><b>${c.num}</b><span>${c.name}</span></div><div class="mini"></div>`;binsEl.appendChild(b)});
+function setTime(t){document.body.dataset.time=t;$("#bTime").textContent=t==="night"?"☀️":"🌙";store.set("sx-time",t)}
+setTime(store.get("sx-time")==="night"?"night":"day");
+$("#bTime").onclick=()=>setTime(document.body.dataset.time==="night"?"day":"night");
+
+/* ===== hud / timer ===== */
+function hud(score,stage){if(score!=null)$("#hScore").textContent=score;if(stage!=null)$("#hStage").textContent=stage}
+function tick(){const s=Math.floor((Date.now()-S.t0)/1000);$("#hTime").textContent=Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
+function begin(){if(!S.t0){S.t0=Date.now();S.timer=setInterval(tick,500)}}
+function say(msg,kind){toast.className="toast "+(kind||"");toast.innerHTML=msg?`<span>${msg}</span>`:""}
+function clearMinis(){$$(".mini").forEach(m=>m.textContent="")}
+function tok(it,i,showName=true){const b=document.createElement("button");b.type="button";b.className="tok";b.dataset.id=it.id;b.style.setProperty("--d",(i*-.37).toFixed(2)+"s");b.setAttribute("aria-label",it.n);
+  b.innerHTML=`<span class="disc">${it.e}</span>${showName?`<span class="nm">${it.n}</span>`:""}`;return b}
+const byId=id=>ITEMS.find(x=>x.id===id);
+
+/* ===== lesson card ===== */
+let ctimers=[],onCloseCb=null;
+function stopTimers(){ctimers.forEach(clearTimeout);ctimers=[]}
+function closeCard(){stopTimers();stopSfx();stopSpeech();ov.classList.remove("on");S.busy=false;const f=onCloseCb;onCloseCb=null;if(f)f()}
+function showPanel(html,bind){stopTimers();card.className="card end";card.innerHTML=html;ov.classList.add("on");S.busy=true;bind&&bind()}
+function openCard(it,o={}){
+  stopTimers();stopSpeech();const c=CATS[it.c];S.busy=true;onCloseCb=o.onClose||null;
+  card.className="card";
+  card.innerHTML=`<div class="stage ${it.c}" id="stg"><i class="wv"></i><i class="wv"></i><i class="wv"></i><span class="lamp l">🚨</span><span class="lamp r">🚨</span><span class="em a-${it.anim}">${it.e}</span><span class="rd"></span></div>
+  <div class="say" id="saybox">${it.say||""}</div>
+  <h2>${it.n}</h2><span class="badge ${it.c}">${c.ic} ${c.name} · ${c.num}</span><p>${it.t}</p>
+  <div class="row"><button type="button" id="bSnd">🔊 Ovozini eshitish</button><button type="button" id="bRead">🗣 O'qib berish</button><button type="button" class="go" id="bOk">${o.label||"Davom etish ▶"}</button></div>`;
+  ov.classList.add("on");
+  const stg=$("#stg"),sb=$("#saybox");
+  const play=()=>{const d=playSnd(it.id);stg.classList.add("playing");sb.classList.remove("show");void sb.offsetWidth;sb.classList.add("show");stopTimers();ctimers.push(setTimeout(()=>stg.classList.remove("playing"),Math.max(1200,d*1000)));return d};
+  $("#bSnd").onclick=()=>{stopSpeech();play()};
+  $("#bRead").onclick=()=>{stopSfx();stg.classList.remove("playing");speak(it.n+". "+it.t)};
+  $("#bOk").onclick=closeCard;
+  ctimers.push(setTimeout(()=>{const d=play();if(!o.quiet)ctimers.push(setTimeout(()=>speak(it.n+". "+it.t),d*1000+250))},300));
+  setTimeout(()=>$("#bOk")&&$("#bOk").focus(),50);
+}
+ov.addEventListener("click",e=>{if(e.target===ov&&$("#bOk"))closeCard()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&ov.classList.contains("on")&&$("#bOk"))closeCard()});
+
+/* ===== finish + confetti ===== */
+function confetti(){for(let i=0;i<26;i++){const s=document.createElement("span");s.className="confetti";s.textContent=["🎉","⭐","🎈","🚒","🚑","🚓","🌟"][i%7];s.style.left=Math.random()*100+"vw";s.style.animationDelay=(Math.random()*1.4).toFixed(2)+"s";document.body.appendChild(s);setTimeout(()=>s.remove(),5000)}}
+const ORDER=["explore","sort","sound","number"];
+function finish(){
+  clearInterval(S.timer);if(S.t0)tick();S.fin=true;
+  const ex=S.mode==="explore",pct=S.total?S.first/S.total:1,st=pct>=.85?3:pct>=.6?2:1;
+  const next=ORDER[(ORDER.indexOf(S.mode)+1)%4],nn={explore:"Tanishuv",sort:"Saralash",sound:"Ovozni top",number:"Qaysi raqam?"}[next];
+  showPanel(`<div class="stage med" style="height:clamp(100px,18vh,200px)"><span class="em a-bounce">🏆</span></div>
+   <h2>${ex?"Hammasini kashf etdingiz!":"Barakalla!"}</h2>
+   <div class="stars3">${"⭐".repeat(ex?3:st)}</div>
+   <div class="stats">${ex?"":`<div><b>${S.first}/${S.total}</b>Baho</div>`}<div><b>${$("#hTime").textContent}</b>Vaqti</div></div>
+   <p>Eslab qoling: <b>101</b> yong'in, <b>102</b> militsiya, <b>103</b> tez yordam.</p>
+   <div class="row"><button type="button" id="again">↻ Qaytadan</button><button type="button" class="go" id="nextm">${nn} ▶</button></div>`,
+   ()=>{$("#again").onclick=()=>{closeCard();setMode(S.mode)};$("#nextm").onclick=()=>{closeCard();setMode(next)}});
+  confetti();chime();setTimeout(()=>playSnd(CATS.med.snd),600);
+}
+
+/* ===== modes ===== */
+function resetStats(){clearInterval(S.timer);S.t0=0;S.timer=null;S.first=0;S.score=0;S.total=0;S.stage=0;S.found=new Set();S.sel=null;S.busy=false;S.fin=false;S.round=0;S.miss=false;$("#hTime").textContent="0:00";say("");clearMinis()}
+function setMode(m){S.mode=m;$$("#modes button").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.m===m)));stopSfx();stopSpeech();ov.classList.remove("on");stopTimers();onCloseCb=null;resetStats();
+  ({explore:renderExplore,sort:renderSort,sound:renderSound,number:renderNumber})[m]()}
+$("#modes").addEventListener("click",e=>{const b=e.target.closest("button");if(b){A();setMode(b.dataset.m)}});
+$("#bReset").onclick=()=>{A();setMode(S.mode)};
+$("#bSound").onclick=()=>{S.soundOn=!S.soundOn;$("#bSound").textContent=S.soundOn?"🔊":"🔇";$("#bSound").setAttribute("aria-pressed",String(S.soundOn));if(!S.soundOn){stopSfx();stopSpeech()}else A()};
+$("#bMusic").onclick=()=>{S.musicOn=!S.musicOn;$("#bMusic").setAttribute("aria-pressed",String(S.musicOn));A();music()};
+$("#bFull").onclick=()=>{try{if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen()}catch(e){}};
+
+/* 1. Explore */
+function renderExplore(){
+  prompt_.innerHTML=`<div class="pp"><h2>Rasmni bosing, ovozini eshiting!</h2><p>Har bir narsa o'z ovozi bilan gapiradi</p></div>`;
+  tray.className="tray explore";tray.innerHTML="";shuffle(ITEMS).forEach((it,i)=>tray.appendChild(tok(it,i)));
+  hud("0/15","Tanishuv");S.total=15;
+}
+tray.addEventListener("click",e=>{const t=e.target.closest(".tok");if(!t||S.busy)return;const it=byId(t.dataset.id);A();
+  if(S.mode==="explore"){begin();S.found.add(it.id);t.classList.add("seen");hud(S.found.size+"/15");
+    openCard(it,{label:"Yopish",onClose:()=>{if(S.found.size===15&&!S.fin)finish()}})}
+  else if(S.mode==="sound"){answerSound(it,t)}
+  else if(S.mode==="sort"&&e.detail===0){selectTok(t)}});
+binsEl.addEventListener("click",e=>{const b=e.target.closest(".bin");if(!b||S.busy)return;const k=b.dataset.cat;A();
+  if(S.mode==="sort"&&S.sel){dropOn(S.sel,b)}
+  else if(S.mode==="number"){answerNumber(k,b)}
+  else{playSnd(CATS[k].snd);speak(CATS[k].name+". "+CATS[k].num);if(S.mode==="sort")say("Avval rasmni tanlang yoki sudrab keling")}});
+
+/* 2. Sort: drag to buildings, in 3 stages */
+let STAGES=[];
+function renderSort(){
+  const g={med:[],fire:[],pol:[]};shuffle(ITEMS).forEach(i=>g[i.c].push(i));
+  const cut={med:[[0,1],[1,3],[3,5]],fire:[[0,2],[2,3],[3,5]],pol:[[0,2],[2,4],[4,5]]};
+  STAGES=[0,1,2].map(s=>shuffle([].concat(...["med","fire","pol"].map(k=>g[k].slice(...cut[k][s])))));S.total=15;loadStage()}
+function loadStage(){
+  prompt_.innerHTML=`<div class="pp"><h2>Rasmni to'g'ri xizmat binosiga olib boring</h2><p>Sudrab olib boring yoki rasmni bosib, so'ng binoni bosing</p></div>`;
+  tray.className="tray";tray.innerHTML="";STAGES[S.stage].forEach((it,i)=>tray.appendChild(tok(it,i)));hud(S.score+"/15",(S.stage+1)+"-bosqich");say("")}
+function selectTok(t){if(S.sel)S.sel.classList.remove("sel");if(S.sel===t){S.sel=null;return}S.sel=t;t.classList.add("sel");begin();const it=byId(t.dataset.id);speak(it.n,()=>{if(S.sel===t)playSnd(it.id)})}
+function dropOn(t,bin){
+  if(S.busy||!t||!bin)return;begin();const it=byId(t.dataset.id),k=bin.dataset.cat;
+  if(S.sel){S.sel.classList.remove("sel");S.sel=null}
+  if(it.c===k){
+    t.classList.add("done");S.score++;if(!t.dataset.miss)S.first++;hud(S.score+"/15");say("To'g'ri! Barakalla!","good");
+    bin.querySelector(".mini").insertAdjacentText("beforeend",it.e);bin.classList.remove("pulse");void bin.offsetWidth;bin.classList.add("pulse");chime();
+    setTimeout(()=>openCard(it,{onClose:afterDrop}),380);
+  }else{
+    t.dataset.miss=1;[t,bin].forEach(x=>{x.classList.remove("shake");void x.offsetWidth;x.classList.add("shake")});say("Bu yerga mos kelmaydi. Yana urinib ko'ring!","bad");buzz()}
+}
+function afterDrop(){if($$(".tok:not(.done)",tray).length)return;
+  if(S.stage<2){const n=S.stage+1;showPanel(`<div class="stage fire" style="height:clamp(100px,18vh,200px)"><span class="em a-bounce">🌟</span></div><h2>${n}-bosqich tugadi!</h2><div class="stars3">${"⭐".repeat(n)}</div><p>Yana ${3-n} ta bosqich qoldi. Davom etamizmi?</p><div class="row"><button type="button" class="go" id="nx">${n+1}-bosqich ▶</button></div>`,
+    ()=>{$("#nx").onclick=()=>{S.stage=n;S.busy=false;ov.classList.remove("on");loadStage()}});chime();confetti()}
+  else finish()}
+/* drag */
+let drag=null;
+tray.addEventListener("pointerdown",e=>{if(S.mode!=="sort"||S.busy)return;const t=e.target.closest(".tok");if(!t||t.classList.contains("done"))return;A();drag={t,x:e.clientX,y:e.clientY,moved:false,g:null}});
+window.addEventListener("pointermove",e=>{if(!drag)return;
+  if(!drag.moved&&Math.hypot(e.clientX-drag.x,e.clientY-drag.y)>8){drag.moved=true;drag.g=document.createElement("div");drag.g.className="ghost";drag.g.textContent=byId(drag.t.dataset.id).e;document.body.appendChild(drag.g);drag.t.style.opacity=.3}
+  if(drag.moved){drag.g.style.left=e.clientX+"px";drag.g.style.top=e.clientY+"px";$$(".bin").forEach(b=>b.classList.remove("over"));const b=binAt(e.clientX,e.clientY);if(b)b.classList.add("over")}});
+const binAt=(x,y)=>{const e=document.elementFromPoint(x,y);return e&&e.closest?e.closest(".bin"):null};
+window.addEventListener("pointerup",e=>{if(!drag)return;const d=drag;drag=null;$$(".bin").forEach(b=>b.classList.remove("over"));
+  if(d.moved){d.g.remove();d.t.style.opacity="";const b=binAt(e.clientX,e.clientY);if(b)dropOn(d.t,b)}else selectTok(d.t)});
+window.addEventListener("pointercancel",()=>{if(drag){if(drag.g)drag.g.remove();drag.t.style.opacity="";drag=null}});
+
+/* 3. Guess the sound */
+function renderSound(){S.order=shuffle(ITEMS).slice(0,10);S.total=10;S.round=0;nextSound()}
+function nextSound(){
+  if(S.round>=S.total){finish();return}
+  const it=S.order[S.round];S.cur=it;S.miss=false;
+  const opts=shuffle([it,...shuffle(ITEMS.filter(x=>x.id!==it.id)).slice(0,3)]);
+  prompt_.innerHTML=`<div class="pp"><h2>Bu qaysi narsaning ovozi?</h2><p>${S.round+1}-savol, jami ${S.total} ta</p></div><button type="button" class="ask" id="ask">🔊 Ovozni eshitish</button>`;
+  $("#ask").onclick=()=>{A();playSnd(it.id)};
+  tray.className="tray";tray.innerHTML="";opts.forEach((o,i)=>tray.appendChild(tok(o,i)));hud(S.first+"/"+S.total,"Savol "+(S.round+1));say("");
+  ctimers.push(setTimeout(()=>{if(S.mode==="sound"&&!S.busy)playSnd(it.id)},600));
+}
+function answerSound(it,t){begin();
+  if(it.id===S.cur.id){if(!S.miss)S.first++;hud(S.first+"/"+S.total);t.classList.add("right");say("To'g'ri! Bu "+it.n.toLowerCase()+"!","good");chime();S.round++;
+    setTimeout(()=>openCard(it,{quiet:false,onClose:nextSound}),500)}
+  else{S.miss=true;t.classList.remove("shake");void t.offsetWidth;t.classList.add("shake");buzz();say("Yana eshiting va urinib ko'ring!","bad");setTimeout(()=>playSnd(S.cur.id),700)}}
+
+/* 4. Which number to call */
+function renderNumber(){S.order=shuffle(SCEN).slice(0,8);S.total=8;S.round=0;nextNumber()}
+function nextNumber(){
+  if(S.round>=S.total){finish();return}
+  const s=S.order[S.round];S.cur=s;S.miss=false;tray.className="tray";tray.innerHTML="";
+  prompt_.innerHTML=`<div class="pp"><h2>Qaysi raqamga qo'ng'iroq qilamiz?</h2><p>${S.round+1}-holat, jami ${S.total} ta</p></div><div class="scn"><span class="big">${s.e}</span><span class="tx">${s.t}</span></div>`;
+  hud(S.first+"/"+S.total,"Holat "+(S.round+1));say("Tegishli xizmat binosini bosing");speak(s.t);}
+function answerNumber(k,bin){begin();const s=S.cur;
+  if(k===s.c){if(!S.miss)S.first++;hud(S.first+"/"+S.total);bin.classList.remove("pulse");void bin.offsetWidth;bin.classList.add("pulse");chime();S.round++;
+    const c=CATS[k];setTimeout(()=>openCard({id:c.snd,e:s.e,n:"📞 "+c.num+" · "+c.short,c:k,anim:k==="fire"||k==="med"||k==="pol"?"drive":"bounce",say:"To'g'ri! "+c.num+" ga qo'ng'iroq!",t:s.why},{onClose:nextNumber}),380)}
+  else{S.miss=true;bin.classList.remove("shake");void bin.offsetWidth;bin.classList.add("shake");buzz();say("Yo'q, yana o'ylab ko'ring!","bad")}}
+
+setMode("explore");
+</script>
+</body>
+</html>
